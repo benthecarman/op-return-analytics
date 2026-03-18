@@ -12,31 +12,6 @@ body {
 h1 { margin-bottom: 20px; color: #f0f6fc; }
 h2 { margin: 24px 0 12px; color: #f0f6fc; }
 
-.controls {
-  display: flex;
-  gap: 16px;
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-}
-
-.controls label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: #8b949e;
-}
-
-.controls input,
-.controls select {
-  padding: 6px 10px;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  background: #161b22;
-  color: #c9d1d9;
-  font-size: 14px;
-}
 
 button {
   padding: 6px 16px;
@@ -88,6 +63,18 @@ button:disabled { opacity: 0.4; cursor: default; }
   border: 1px solid #30363d;
   border-radius: 8px;
   padding: 16px;
+}
+
+.chart-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chart-btn {
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .chart-hint {

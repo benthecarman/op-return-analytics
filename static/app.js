@@ -9,7 +9,8 @@ const api = async (path, params = {}) => {
 
 let mainChart;
 let currentPage = 1;
-let allTimeseriesData = null;
+let allPoints = [];
+let isCumulative = false;
 
 function fmtSats(n) {
   if (n == null) return "\u2014";
@@ -21,6 +22,11 @@ function fmtDate(ts) {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
 
+function fmtDateTime(ts) {
+  if (!ts) return "\u2014";
+  return new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 16);
+}
+
 function shortTxid(txid) {
   if (!txid) return "\u2014";
   return txid.slice(0, 8) + "\u2026" + txid.slice(-8);
@@ -28,7 +34,6 @@ function shortTxid(txid) {
 
 function fmtFeeRate(raw) {
   if (raw == null) return "\u2014";
-  // bitcoin-s stores SatoshisPerVirtualByte as little-endian hex (16 chars)
   if (/^[0-9a-fA-F]{16}$/.test(raw)) {
     const le = raw.match(/../g).reverse().join("");
     return parseInt(le, 16) + " sat/vB";
@@ -38,22 +43,16 @@ function fmtFeeRate(raw) {
   return raw;
 }
 
-function cumulative(arr) {
-  let sum = 0;
-  return arr.map((v) => (sum += v));
-}
-
 function getVisibleRange() {
-  if (!mainChart) return {};
+  if (!mainChart || allPoints.length === 0) return {};
   const scale = mainChart.scales.x;
-  const min = Math.floor(scale.min);
-  const max = Math.ceil(scale.max);
-  if (!allTimeseriesData || allTimeseriesData.length === 0) return {};
-  const startIdx = Math.max(0, min);
-  const endIdx = Math.min(allTimeseriesData.length - 1, max);
+  const labels = mainChart.data.labels;
+  const minIdx = Math.max(0, Math.floor(scale.min));
+  const maxIdx = Math.min(labels.length - 1, Math.ceil(scale.max));
+  // Convert displayed dates back to API format (YYYY-MM-DD)
   return {
-    start: allTimeseriesData[startIdx]?.period,
-    end: allTimeseriesData[endIdx]?.period,
+    start: labels[minIdx]?.slice(0, 10),
+    end: labels[maxIdx]?.slice(0, 10),
   };
 }
 
@@ -104,55 +103,84 @@ function onZoomOrPan() {
   loadOrders(range.start, range.end);
 }
 
-function renderChart(data) {
-  const cumul = $("#chartMode").value === "cumulative";
-  const labels = data.map((d) => d.period);
-  const orders = data.map((d) => d.orders);
-  const profit = data.map((d) => d.profit_sats);
+function renderChart() {
+  const labels = allPoints.map((p) => fmtDateTime(p.time));
+  const profits = allPoints.map((p) => p.profit);
 
-  const ordersData = cumul ? cumulative(orders) : orders;
-  const profitData = cumul ? cumulative(profit) : profit;
-  const suffix = cumul ? " (Cumulative)" : "";
+  let profitData, orderData;
+  if (isCumulative) {
+    let profitSum = 0;
+    profitData = profits.map((v) => (profitSum += v));
+    orderData = profits.map((_, i) => i + 1);
+  } else {
+    profitData = profits;
+    orderData = null;
+  }
+
+  const suffix = isCumulative ? " (Cumulative)" : "";
 
   if (mainChart) mainChart.destroy();
 
+  const datasets = [];
+
+  if (isCumulative) {
+    datasets.push({
+      label: "Total Orders",
+      data: orderData,
+      borderColor: "#1f6feb",
+      backgroundColor: "rgba(31, 111, 235, 0.1)",
+      fill: false,
+      tension: 0.3,
+      pointRadius: 1,
+      yAxisID: "yOrders",
+    });
+  }
+
+  datasets.push({
+    label: "Profit (sats)" + suffix,
+    data: profitData,
+    borderColor: "#3fb950",
+    backgroundColor: "rgba(63, 185, 80, 0.1)",
+    fill: true,
+    tension: 0.3,
+    pointRadius: 1,
+    yAxisID: "yProfit",
+  });
+
+  const scales = {
+    x: {
+      ticks: { color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
+      grid: { color: "#21262d" },
+    },
+    yProfit: {
+      type: "linear",
+      position: isCumulative ? "right" : "left",
+      beginAtZero: true,
+      title: { display: true, text: "Profit (sats)" + suffix, color: "#3fb950" },
+      ticks: { color: "#3fb950" },
+      grid: { color: "#21262d" },
+    },
+  };
+
+  if (isCumulative) {
+    scales.yOrders = {
+      type: "linear",
+      position: "left",
+      beginAtZero: true,
+      title: { display: true, text: "Total Orders", color: "#1f6feb" },
+      ticks: { color: "#1f6feb" },
+      grid: { drawOnChartArea: false },
+    };
+  }
+
   mainChart = new Chart($("#mainChart"), {
     type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Orders" + suffix,
-          data: ordersData,
-          borderColor: "#1f6feb",
-          backgroundColor: "rgba(31, 111, 235, 0.1)",
-          fill: false,
-          tension: 0.3,
-          pointRadius: 2,
-          yAxisID: "yOrders",
-        },
-        {
-          label: "Profit (sats)" + suffix,
-          data: profitData,
-          borderColor: "#3fb950",
-          backgroundColor: "rgba(63, 185, 80, 0.1)",
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-          yAxisID: "yProfit",
-        },
-      ],
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
+      interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: {
-          labels: { color: "#c9d1d9" },
-        },
+        legend: { labels: { color: "#c9d1d9" } },
         zoom: {
           zoom: {
             drag: {
@@ -161,9 +189,7 @@ function renderChart(data) {
               borderColor: "#1f6feb",
               borderWidth: 1,
             },
-            wheel: {
-              enabled: true,
-            },
+            wheel: { enabled: true },
             mode: "x",
             onZoomComplete: onZoomOrPan,
           },
@@ -174,49 +200,24 @@ function renderChart(data) {
           },
         },
       },
-      scales: {
-        x: {
-          ticks: { color: "#8b949e", maxRotation: 45 },
-          grid: { color: "#21262d" },
-        },
-        yOrders: {
-          type: "linear",
-          position: "left",
-          beginAtZero: true,
-          title: { display: true, text: "Orders" + suffix, color: "#1f6feb" },
-          ticks: { color: "#1f6feb" },
-          grid: { color: "#21262d" },
-        },
-        yProfit: {
-          type: "linear",
-          position: "right",
-          beginAtZero: true,
-          title: { display: true, text: "Profit (sats)" + suffix, color: "#3fb950" },
-          ticks: { color: "#3fb950" },
-          grid: { drawOnChartArea: false },
-        },
-      },
+      scales,
     },
   });
 }
 
 async function loadChart() {
-  const granularity = $("#granularity").value;
-  allTimeseriesData = await api("timeseries", { granularity });
-  renderChart(allTimeseriesData);
+  allPoints = await api("chart");
+  renderChart();
 }
 
 async function refresh() {
   await Promise.all([loadSummary(), loadChart(), loadOrders()]);
 }
 
-$("#granularity").addEventListener("change", async () => {
-  await loadChart();
-  onZoomOrPan();
-});
-
-$("#chartMode").addEventListener("change", () => {
-  if (allTimeseriesData) renderChart(allTimeseriesData);
+$("#toggleMode").addEventListener("click", () => {
+  isCumulative = !isCumulative;
+  $("#toggleMode").textContent = isCumulative ? "Per Order" : "Cumulative";
+  renderChart();
 });
 
 $("#resetZoom").addEventListener("click", () => {

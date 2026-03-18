@@ -92,6 +92,22 @@ export function getTimeseries(
     .all(strftimeFmt, tStart, tEnd) as TimeseriesRow[];
 }
 
+export interface ChartPoint {
+  time: number;
+  profit: number;
+}
+
+export function getChartPoints(): ChartPoint[] {
+  return db
+    .prepare(
+      `SELECT time, coalesce(profit, 0) as profit
+      FROM op_return_requests
+      WHERE txid IS NOT NULL
+      ORDER BY time`
+    )
+    .all() as ChartPoint[];
+}
+
 export function getOrders(
   start?: string,
   end?: string,

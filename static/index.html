@@ -12,30 +12,17 @@
 <body>
   <h1>OP_RETURN Analytics</h1>
 
-  <div class="controls">
-    <label>Granularity
-      <select id="granularity">
-        <option value="day">Day</option>
-        <option value="week">Week</option>
-        <option value="month">Month</option>
-      </select>
-    </label>
-    <label>Mode
-      <select id="chartMode">
-        <option value="periodic">Per Period</option>
-        <option value="cumulative">Cumulative</option>
-      </select>
-    </label>
-    <button id="resetZoom">Reset Zoom</button>
-  </div>
-
   <div class="summary" id="summary"></div>
 
   <div class="chart-container">
-    <div class="chart-box full">
+    <div class="chart-box">
+      <div class="chart-toolbar">
+        <button id="toggleMode" class="chart-btn">Cumulative</button>
+        <button id="resetZoom" class="chart-btn">Reset Zoom</button>
+      </div>
       <canvas id="mainChart"></canvas>
     </div>
-    <p class="chart-hint">Drag on the chart to zoom into a time period. Scroll to zoom. Double-click to reset.</p>
+    <p class="chart-hint">Drag to zoom. Scroll to zoom. Double-click to reset.</p>
   </div>
 
   <div class="table-section">
@@ -62,6 +49,6 @@
     </table>
   </div>
 
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>
