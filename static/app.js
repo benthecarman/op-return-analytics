@@ -52,9 +52,9 @@ function getVisibleRange() {
   return { start, end };
 }
 
-function fmtUsd(n) {
+function fmtUsd(n, decimals = 2) {
   if (n == null || n === 0) return "\u2014";
-  return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function satsToUsd(sats, btcPriceCents) {
@@ -81,7 +81,7 @@ async function loadSummary(start, end) {
   $("#summary").innerHTML =
     stat("Orders", fmtSats(data.total_orders), avgPerDay) +
     stat("Profit", fmtSats(data.total_profit_sats) + " sats",
-      fmtUsd(data.total_profit_usd) + " at time / " + fmtUsd(currentUsd) + " now") +
+      fmtUsd(data.total_profit_usd, 0) + " at time / " + fmtUsd(currentUsd, 0) + " now") +
     stat("Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats",
       fmtUsd(chainFeesUsd)) +
     stat("Avg Profit", fmtSats(data.avg_profit_sats) + " sats",
