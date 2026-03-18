@@ -73,15 +73,22 @@ async function loadSummary(start, end) {
     ? satsToUsd(data.total_profit_sats, currentBtcPriceCents)
     : null;
   const avgUsd = currentBtcPriceCents > 0 ? satsToUsd(data.avg_profit_sats, currentBtcPriceCents) : null;
+  const chainFeesUsd = currentBtcPriceCents > 0 ? satsToUsd(data.total_chain_fees_sats, currentBtcPriceCents) : null;
+  let avgPerDay = "\u2014";
+  if (data.first_order && data.last_order && data.total_orders > 0) {
+    const days = Math.max(1, (data.last_order - data.first_order) / 86400);
+    avgPerDay = (data.total_orders / days).toFixed(1) + " / day";
+  }
   const stat = (label, primary, secondary) => {
     const sub = secondary ? `<div class="subvalue">${secondary}</div>` : "";
     return `<div class="stat"><div class="label">${label}</div><div class="value">${primary}</div>${sub}</div>`;
   };
   $("#summary").innerHTML =
-    stat("Orders", fmtSats(data.total_orders)) +
+    stat("Orders", fmtSats(data.total_orders), avgPerDay) +
     stat("Profit", fmtSats(data.total_profit_sats) + " sats",
       fmtUsd(data.total_profit_usd) + " at time / " + fmtUsd(currentUsd) + " now") +
-    stat("Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats") +
+    stat("Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats",
+      fmtUsd(chainFeesUsd) + " now") +
     stat("Avg Profit", fmtSats(data.avg_profit_sats) + " sats",
       fmtUsd(avgUsd) + " now");
 }
