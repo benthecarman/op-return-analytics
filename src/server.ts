@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { getSummary, getTimeseries, getOrders } from "./db.js";
+import { dbPath, getSummary, getTimeseries, getOrders } from "./db.js";
 
 const app = new Hono();
 
@@ -46,5 +46,6 @@ app.get("/", serveStatic({ path: "./static/index.html" }));
 app.use("/static/*", serveStatic({ root: "./" }));
 
 const port = parseInt(process.env.PORT ?? "8080", 10);
+console.log(`Database: ${dbPath}`);
 console.log(`Listening on http://localhost:${port}`);
 serve({ fetch: app.fetch, port });

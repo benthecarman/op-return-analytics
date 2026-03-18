@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { homedir } from "os";
 import { join } from "path";
 
-const dbPath =
+export const dbPath =
   process.env.OPRETURN_DB ?? join(homedir(), ".op-return-bot", "invoices.sqlite");
 
 const db = new Database(dbPath, { readonly: true });
