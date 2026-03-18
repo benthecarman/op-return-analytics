@@ -83,9 +83,9 @@ async function loadSummary(start, end) {
     stat("Profit", fmtSats(data.total_profit_sats) + " sats",
       fmtUsd(data.total_profit_usd) + " at time / " + fmtUsd(currentUsd) + " now") +
     stat("Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats",
-      fmtUsd(chainFeesUsd) + " now") +
+      fmtUsd(chainFeesUsd)) +
     stat("Avg Profit", fmtSats(data.avg_profit_sats) + " sats",
-      fmtUsd(avgUsd) + " now");
+      fmtUsd(avgUsd));
 }
 
 async function loadOrders(start, end, page = 1) {
