@@ -14,17 +14,30 @@ interface Row {
   cnt: number;
 }
 
-async function fetchPrice(date: string): Promise<number> {
+async function fetchPriceCoinbase(date: string): Promise<number> {
   const res = await fetch(
     `https://api.coinbase.com/v2/prices/BTC-USD/spot?date=${date}`
   );
-  if (!res.ok) {
-    console.error(`  Failed to fetch price for ${date}: ${res.status}`);
-    return 0;
-  }
+  if (!res.ok) return 0;
   const json = (await res.json()) as { data: { amount: string } };
   const dollars = parseFloat(json.data.amount);
   return Math.round(dollars * 100);
+}
+
+async function fetchPriceBlockchain(date: string): Promise<number> {
+  const res = await fetch(
+    `https://api.blockchain.info/charts/market-price?timespan=1days&start=${date}&format=json`
+  );
+  if (!res.ok) return 0;
+  const json = (await res.json()) as { values: { x: number; y: number }[] };
+  if (!json.values || json.values.length === 0) return 0;
+  return Math.round(json.values[0].y * 100);
+}
+
+async function fetchPrice(date: string): Promise<number> {
+  const price = await fetchPriceCoinbase(date);
+  if (price > 0) return price;
+  return fetchPriceBlockchain(date);
 }
 
 async function main() {
