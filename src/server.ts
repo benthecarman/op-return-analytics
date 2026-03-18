@@ -45,7 +45,7 @@ app.get("/api/orders", (c) => {
 app.get("/", serveStatic({ path: "./static/index.html" }));
 app.use("/static/*", serveStatic({ root: "./" }));
 
-const port = parseInt(process.env.PORT ?? "8080", 10);
+const port = parseInt(process.env.PORT ?? "8083", 10);
 console.log(`Database: ${dbPath}`);
 console.log(`Listening on http://localhost:${port}`);
 serve({ fetch: app.fetch, port });
