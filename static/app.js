@@ -114,18 +114,16 @@ function renderChart() {
     orderData = profits.map((_, i) => i + 1);
   } else {
     profitData = profits;
-    orderData = null;
+    orderData = profits.map((_, i) => i + 1);
   }
 
   const suffix = isCumulative ? " (Cumulative)" : "";
 
   if (mainChart) mainChart.destroy();
 
-  const datasets = [];
-
-  if (isCumulative) {
-    datasets.push({
-      label: "Total Orders",
+  const datasets = [
+    {
+      label: isCumulative ? "Total Orders" : "Order #",
       data: orderData,
       borderColor: "#1f6feb",
       backgroundColor: "rgba(31, 111, 235, 0.1)",
@@ -133,45 +131,41 @@ function renderChart() {
       tension: 0.3,
       pointRadius: 1,
       yAxisID: "yOrders",
-    });
-  }
-
-  datasets.push({
-    label: "Profit (sats)" + suffix,
-    data: profitData,
-    borderColor: "#3fb950",
-    backgroundColor: "rgba(63, 185, 80, 0.1)",
-    fill: true,
-    tension: 0.3,
-    pointRadius: 1,
-    yAxisID: "yProfit",
-  });
+    },
+    {
+      label: "Profit (sats)" + suffix,
+      data: profitData,
+      borderColor: "#3fb950",
+      backgroundColor: "rgba(63, 185, 80, 0.1)",
+      fill: true,
+      tension: 0.3,
+      pointRadius: 1,
+      yAxisID: "yProfit",
+    },
+  ];
 
   const scales = {
     x: {
       ticks: { color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
       grid: { color: "#21262d" },
     },
-    yProfit: {
-      type: "linear",
-      position: isCumulative ? "right" : "left",
-      beginAtZero: true,
-      title: { display: true, text: "Profit (sats)" + suffix, color: "#3fb950" },
-      ticks: { color: "#3fb950" },
-      grid: { color: "#21262d" },
-    },
-  };
-
-  if (isCumulative) {
-    scales.yOrders = {
+    yOrders: {
       type: "linear",
       position: "left",
       beginAtZero: true,
-      title: { display: true, text: "Total Orders", color: "#1f6feb" },
+      title: { display: true, text: isCumulative ? "Total Orders" : "Order #", color: "#1f6feb" },
       ticks: { color: "#1f6feb" },
+      grid: { color: "#21262d" },
+    },
+    yProfit: {
+      type: "linear",
+      position: "right",
+      beginAtZero: true,
+      title: { display: true, text: "Profit (sats)" + suffix, color: "#3fb950" },
+      ticks: { color: "#3fb950" },
       grid: { drawOnChartArea: false },
-    };
-  }
+    },
+  };
 
   mainChart = new Chart($("#mainChart"), {
     type: "line",
