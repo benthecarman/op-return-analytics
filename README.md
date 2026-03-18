@@ -29,6 +29,15 @@ OPRETURN_DB=/path/to/invoices.sqlite npm run dev
 PORT=3000 npm run dev
 ```
 
+## Updating
+
+```bash
+git pull
+npm install
+npm run build
+sudo systemctl restart op-return-analytics
+```
+
 ## Stack
 
 - TypeScript + [Hono](https://hono.dev)
