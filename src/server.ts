@@ -39,6 +39,19 @@ app.get("/api/chart", (c) => {
   return c.json(getChartPoints());
 });
 
+app.get("/api/btc-price", async (c) => {
+  try {
+    const res = await fetch(
+      "https://api.coinbase.com/v2/prices/BTC-USD/spot"
+    );
+    const json = (await res.json()) as { data: { amount: string } };
+    const cents = Math.round(parseFloat(json.data.amount) * 100);
+    return c.json({ btc_price_cents: cents });
+  } catch {
+    return c.json({ btc_price_cents: 0 });
+  }
+});
+
 app.get("/api/orders", (c) => {
   const start = c.req.query("start");
   const end = c.req.query("end");

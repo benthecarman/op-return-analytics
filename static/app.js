@@ -79,6 +79,7 @@ async function loadSummary(start, end) {
     ["Profit (USD now)", fmtUsd(currentUsd)],
     ["Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats"],
     ["Avg Profit / Order", fmtSats(data.avg_profit_sats) + " sats"],
+    ["Avg Profit (USD now)", fmtUsd(currentBtcPriceCents > 0 ? satsToUsd(data.avg_profit_sats, currentBtcPriceCents) : null)],
   ]
     .map(
       ([label, value]) =>
@@ -223,9 +224,8 @@ async function loadChart() {
 
 async function fetchCurrentBtcPrice() {
   try {
-    const res = await fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot");
-    const json = await res.json();
-    currentBtcPriceCents = Math.round(parseFloat(json.data.amount) * 100);
+    const data = await api("btc-price");
+    currentBtcPriceCents = data.btc_price_cents;
   } catch (e) {
     console.error("Failed to fetch BTC price", e);
   }
