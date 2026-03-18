@@ -9,6 +9,7 @@ const api = async (path, params = {}) => {
 
 let ordersChart, profitChart;
 let currentPage = 1;
+let lastTimeseriesData = null;
 
 function getFilters() {
   return {
@@ -48,11 +49,20 @@ async function loadSummary(filters) {
     .join("");
 }
 
-async function loadCharts(filters) {
-  const data = await api("timeseries", filters);
+function cumulative(arr) {
+  let sum = 0;
+  return arr.map((v) => (sum += v));
+}
+
+function renderCharts(data) {
+  const cumul = $("#chartMode").value === "cumulative";
   const labels = data.map((d) => d.period);
   const orders = data.map((d) => d.orders);
   const profit = data.map((d) => d.profit_sats);
+
+  const ordersData = cumul ? cumulative(orders) : orders;
+  const profitData = cumul ? cumulative(profit) : profit;
+  const suffix = cumul ? " (Cumulative)" : "";
 
   const chartOpts = (title) => ({
     responsive: true,
@@ -74,18 +84,27 @@ async function loadCharts(filters) {
   if (profitChart) profitChart.destroy();
 
   ordersChart = new Chart($("#ordersChart"), {
-    type: "bar",
+    type: cumul ? "line" : "bar",
     data: {
       labels,
       datasets: [
-        {
-          data: orders,
-          backgroundColor: "#1f6feb",
-          borderRadius: 3,
-        },
+        cumul
+          ? {
+              data: ordersData,
+              borderColor: "#1f6feb",
+              backgroundColor: "rgba(31, 111, 235, 0.1)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+            }
+          : {
+              data: ordersData,
+              backgroundColor: "#1f6feb",
+              borderRadius: 3,
+            },
       ],
     },
-    options: chartOpts("Orders"),
+    options: chartOpts("Orders" + suffix),
   });
 
   profitChart = new Chart($("#profitChart"), {
@@ -94,7 +113,7 @@ async function loadCharts(filters) {
       labels,
       datasets: [
         {
-          data: profit,
+          data: profitData,
           borderColor: "#3fb950",
           backgroundColor: "rgba(63, 185, 80, 0.1)",
           fill: true,
@@ -103,8 +122,13 @@ async function loadCharts(filters) {
         },
       ],
     },
-    options: chartOpts("Profit (sats)"),
+    options: chartOpts("Profit (sats)" + suffix),
   });
+}
+
+async function loadCharts(filters) {
+  lastTimeseriesData = await api("timeseries", filters);
+  renderCharts(lastTimeseriesData);
 }
 
 async function loadOrders(filters, page = 1) {
@@ -151,4 +175,7 @@ $("#nextPage").addEventListener("click", () => {
   loadOrders(getFilters(), currentPage + 1);
 });
 
+$("#chartMode").addEventListener("change", () => {
+  if (lastTimeseriesData) renderCharts(lastTimeseriesData);
+});
 refresh();
