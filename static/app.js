@@ -11,6 +11,7 @@ let mainChart;
 let currentPage = 1;
 let allPoints = [];
 let isCumulative = false;
+let currentBtcPriceCents = 0;
 
 function fmtSats(n) {
   if (n == null) return "\u2014";
@@ -68,10 +69,14 @@ function satsToUsd(sats, btcPriceCents) {
 
 async function loadSummary(start, end) {
   const data = await api("summary", { start, end });
+  const currentUsd = currentBtcPriceCents > 0
+    ? satsToUsd(data.total_profit_sats, currentBtcPriceCents)
+    : null;
   $("#summary").innerHTML = [
     ["Orders", fmtSats(data.total_orders)],
     ["Profit", fmtSats(data.total_profit_sats) + " sats"],
-    ["Profit (USD)", fmtUsd(data.total_profit_usd)],
+    ["Profit (USD at time)", fmtUsd(data.total_profit_usd)],
+    ["Profit (USD now)", fmtUsd(currentUsd)],
     ["Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats"],
     ["Avg Profit / Order", fmtSats(data.avg_profit_sats) + " sats"],
   ]
@@ -216,7 +221,18 @@ async function loadChart() {
   renderChart();
 }
 
+async function fetchCurrentBtcPrice() {
+  try {
+    const res = await fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot");
+    const json = await res.json();
+    currentBtcPriceCents = Math.round(parseFloat(json.data.amount) * 100);
+  } catch (e) {
+    console.error("Failed to fetch BTC price", e);
+  }
+}
+
 async function refresh() {
+  await fetchCurrentBtcPrice();
   await Promise.all([loadSummary(), loadChart(), loadOrders()]);
 }
 
