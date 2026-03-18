@@ -47,14 +47,9 @@ function fmtFeeRate(raw) {
 function getVisibleRange() {
   if (!mainChart || allPoints.length === 0) return {};
   const scale = mainChart.scales.x;
-  const labels = mainChart.data.labels;
-  const minIdx = Math.max(0, Math.floor(scale.min));
-  const maxIdx = Math.min(labels.length - 1, Math.ceil(scale.max));
-  // Convert displayed dates back to API format (YYYY-MM-DD)
-  return {
-    start: labels[minIdx]?.slice(0, 10),
-    end: labels[maxIdx]?.slice(0, 10),
-  };
+  const start = new Date(scale.min).toISOString().slice(0, 10);
+  const end = new Date(scale.max).toISOString().slice(0, 10);
+  return { start, end };
 }
 
 function fmtUsd(n) {
@@ -127,7 +122,7 @@ function onZoomOrPan() {
 }
 
 function renderChart() {
-  const labels = allPoints.map((p) => fmtDateTime(p.time));
+  const timestamps = allPoints.map((p) => p.time * 1000);
   const profits = allPoints.map((p) => p.profit);
   const profitsUsd = allPoints.map((p) =>
     p.btc_price > 0 ? (p.profit / 100000000) * (p.btc_price / 100) : null
@@ -136,14 +131,14 @@ function renderChart() {
   let profitData, profitUsdData, orderData;
   if (isCumulative) {
     let profitSum = 0;
-    profitData = profits.map((v) => (profitSum += v));
+    profitData = timestamps.map((t, i) => ({ x: t, y: (profitSum += profits[i]) }));
     let usdSum = 0;
-    profitUsdData = profitsUsd.map((v) => (usdSum += v ?? 0));
-    orderData = profits.map((_, i) => i + 1);
+    profitUsdData = timestamps.map((t, i) => ({ x: t, y: (usdSum += profitsUsd[i] ?? 0) }));
+    orderData = timestamps.map((t, i) => ({ x: t, y: i + 1 }));
   } else {
-    profitData = profits;
-    profitUsdData = profitsUsd;
-    orderData = profits.map((_, i) => i + 1);
+    profitData = timestamps.map((t, i) => ({ x: t, y: profits[i] }));
+    profitUsdData = timestamps.map((t, i) => ({ x: t, y: profitsUsd[i] }));
+    orderData = timestamps.map((t, i) => ({ x: t, y: i + 1 }));
   }
 
   const suffix = isCumulative ? " (Cumulative)" : "";
@@ -185,6 +180,8 @@ function renderChart() {
 
   const scales = {
     x: {
+      type: "time",
+      time: { tooltipFormat: "yyyy-MM-dd HH:mm" },
       ticks: { color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
       grid: { color: "#21262d" },
     },
@@ -216,7 +213,7 @@ function renderChart() {
 
   mainChart = new Chart($("#mainChart"), {
     type: "line",
-    data: { labels, datasets },
+    data: { datasets },
     options: {
       responsive: true,
       interaction: { mode: "index", intersect: false },
