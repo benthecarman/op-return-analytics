@@ -26,6 +26,18 @@ function shortTxid(txid) {
   return txid.slice(0, 8) + "\u2026" + txid.slice(-8);
 }
 
+function fmtFeeRate(raw) {
+  if (raw == null) return "\u2014";
+  // bitcoin-s stores SatoshisPerVirtualByte as little-endian hex (16 chars)
+  if (/^[0-9a-fA-F]{16}$/.test(raw)) {
+    const le = raw.match(/../g).reverse().join("");
+    return parseInt(le, 16) + " sat/vB";
+  }
+  const f = parseFloat(raw);
+  if (!isNaN(f)) return f + " sat/vB";
+  return raw;
+}
+
 function cumulative(arr) {
   let sum = 0;
   return arr.map((v) => (sum += v));
@@ -79,7 +91,7 @@ async function loadOrders(start, end, page = 1) {
       <td>${fmtSats(o.profit)}</td>
       <td>${fmtSats(o.chain_fee)}</td>
       <td>${o.vsize ?? "\u2014"}</td>
-      <td>${o.fee_rate ?? "\u2014"}</td>
+      <td>${fmtFeeRate(o.fee_rate)}</td>
       <td>${o.no_twitter ? "Yes" : "No"}</td>
     </tr>`
     )
