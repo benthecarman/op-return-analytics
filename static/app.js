@@ -175,7 +175,8 @@ $("#nextPage").addEventListener("click", () => {
   loadOrders(getFilters(), currentPage + 1);
 });
 
-$("#chartMode").addEventListener("change", () => {
+document.getElementById("chartMode").addEventListener("change", () => {
   if (lastTimeseriesData) renderCharts(lastTimeseriesData);
 });
+
 refresh();
