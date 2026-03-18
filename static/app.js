@@ -124,14 +124,20 @@ function onZoomOrPan() {
 function renderChart() {
   const labels = allPoints.map((p) => fmtDateTime(p.time));
   const profits = allPoints.map((p) => p.profit);
+  const profitsUsd = allPoints.map((p) =>
+    p.btc_price > 0 ? (p.profit / 100000000) * (p.btc_price / 100) : null
+  );
 
-  let profitData, orderData;
+  let profitData, profitUsdData, orderData;
   if (isCumulative) {
     let profitSum = 0;
     profitData = profits.map((v) => (profitSum += v));
+    let usdSum = 0;
+    profitUsdData = profitsUsd.map((v) => (usdSum += v ?? 0));
     orderData = profits.map((_, i) => i + 1);
   } else {
     profitData = profits;
+    profitUsdData = profitsUsd;
     orderData = profits.map((_, i) => i + 1);
   }
 
@@ -155,10 +161,20 @@ function renderChart() {
       data: profitData,
       borderColor: "#3fb950",
       backgroundColor: "rgba(63, 185, 80, 0.1)",
-      fill: true,
+      fill: false,
       tension: 0.3,
       pointRadius: 1,
       yAxisID: "yProfit",
+    },
+    {
+      label: "Profit (USD)" + suffix,
+      data: profitUsdData,
+      borderColor: "#d29922",
+      backgroundColor: "rgba(210, 153, 34, 0.1)",
+      fill: true,
+      tension: 0.3,
+      pointRadius: 1,
+      yAxisID: "yUsd",
     },
   ];
 
@@ -181,6 +197,14 @@ function renderChart() {
       beginAtZero: true,
       title: { display: true, text: "Profit (sats)" + suffix, color: "#3fb950" },
       ticks: { color: "#3fb950" },
+      grid: { drawOnChartArea: false },
+    },
+    yUsd: {
+      type: "linear",
+      position: "right",
+      beginAtZero: true,
+      title: { display: true, text: "Profit (USD)" + suffix, color: "#d29922" },
+      ticks: { color: "#d29922" },
       grid: { drawOnChartArea: false },
     },
   };
