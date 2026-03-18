@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OP_RETURN Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h1>OP_RETURN Analytics</h1>
+
+  <div class="controls">
+    <label>Start <input type="date" id="start"></label>
+    <label>End <input type="date" id="end"></label>
+    <label>Granularity
+      <select id="granularity">
+        <option value="day">Day</option>
+        <option value="week">Week</option>
+        <option value="month">Month</option>
+      </select>
+    </label>
+    <button id="apply">Apply</button>
+  </div>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <canvas id="ordersChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <canvas id="profitChart"></canvas>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <h2>Orders</h2>
+    <div class="table-controls">
+      <button id="prevPage" disabled>&laquo; Prev</button>
+      <span id="pageInfo"></span>
+      <button id="nextPage" disabled>Next &raquo;</button>
+    </div>
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>TxID</th>
+          <th>Profit (sats)</th>
+          <th>Chain Fee (sats)</th>
+          <th>vSize</th>
+          <th>Fee Rate</th>
+          <th>Private</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
