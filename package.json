@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "backfill-prices": "tsx scripts/backfill-prices.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.11",
