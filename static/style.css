@@ -54,6 +54,12 @@ button:disabled { opacity: 0.4; cursor: default; }
   margin-top: 4px;
 }
 
+.stat .subvalue {
+  font-size: 13px;
+  color: #8b949e;
+  margin-top: 2px;
+}
+
 .chart-container {
   margin-bottom: 24px;
 }
