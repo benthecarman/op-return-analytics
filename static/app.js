@@ -56,11 +56,22 @@ function getVisibleRange() {
   };
 }
 
+function fmtUsd(n) {
+  if (n == null || n === 0) return "\u2014";
+  return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function satsToUsd(sats, btcPriceCents) {
+  if (!btcPriceCents || btcPriceCents === 0) return null;
+  return (sats / 100000000) * (btcPriceCents / 100);
+}
+
 async function loadSummary(start, end) {
   const data = await api("summary", { start, end });
   $("#summary").innerHTML = [
     ["Orders", fmtSats(data.total_orders)],
     ["Profit", fmtSats(data.total_profit_sats) + " sats"],
+    ["Profit (USD)", fmtUsd(data.total_profit_usd)],
     ["Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats"],
     ["Avg Profit / Order", fmtSats(data.avg_profit_sats) + " sats"],
   ]
@@ -88,6 +99,7 @@ async function loadOrders(start, end, page = 1) {
       <td>${fmtDate(o.time)}</td>
       <td><a href="https://mempool.space/tx/${o.txid}" target="_blank">${shortTxid(o.txid)}</a></td>
       <td>${fmtSats(o.profit)}</td>
+      <td>${fmtUsd(satsToUsd(o.profit, o.btc_price))}</td>
       <td>${fmtSats(o.chain_fee)}</td>
       <td>${o.vsize ?? "\u2014"}</td>
       <td>${fmtFeeRate(o.fee_rate)}</td>

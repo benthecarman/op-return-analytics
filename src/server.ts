@@ -14,6 +14,7 @@ app.get("/api/summary", (c) => {
     total_profit_sats: row.total_profit,
     total_chain_fees_sats: row.total_chain_fees,
     avg_profit_sats: Math.round(row.avg_profit),
+    total_profit_usd: Math.round(row.total_profit_usd * 100) / 100,
     first_order: row.first_order,
     last_order: row.last_order,
   });
