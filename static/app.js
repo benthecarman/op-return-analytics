@@ -245,7 +245,7 @@ function renderChart() {
               borderColor: "#1f6feb",
               borderWidth: 1,
             },
-            wheel: { enabled: true },
+            wheel: { enabled: false },
             mode: "x",
             onZoomComplete: onZoomOrPan,
           },
