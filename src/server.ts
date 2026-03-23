@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { dbPath, getSummary, getTimeseries, getChartPoints, getOrders } from "./db.js";
+import { dbPath, getSummary, getTimeseries, getChartPoints, getInvoiceTimestamps, getOrders } from "./db.js";
 
 const app = new Hono();
 
@@ -38,6 +38,10 @@ app.get("/api/timeseries", (c) => {
 
 app.get("/api/chart", (c) => {
   return c.json(getChartPoints());
+});
+
+app.get("/api/invoice-chart", (c) => {
+  return c.json(getInvoiceTimestamps());
 });
 
 app.get("/api/btc-price", async (c) => {

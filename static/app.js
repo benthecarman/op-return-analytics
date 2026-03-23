@@ -10,6 +10,7 @@ const api = async (path, params = {}) => {
 let mainChart;
 let currentPage = 1;
 let allPoints = [];
+let invoiceTimestamps = [];
 let isCumulative = false;
 let currentBtcPriceCents = 0;
 
@@ -132,6 +133,9 @@ function renderChart() {
     p.btc_price > 0 ? (p.profit / 100000000) * (p.btc_price / 100) : null
   );
 
+  const invoiceTs = invoiceTimestamps.map((t) => t * 1000);
+  const invoiceData = invoiceTs.map((t, i) => ({ x: t, y: i + 1 }));
+
   let profitData, profitUsdData, orderData;
   if (isCumulative) {
     let profitSum = 0;
@@ -151,7 +155,17 @@ function renderChart() {
 
   const datasets = [
     {
-      label: isCumulative ? "Total Orders" : "Order #",
+      label: "Total Invoices",
+      data: invoiceData,
+      borderColor: "#8b949e",
+      backgroundColor: "rgba(139, 148, 158, 0.1)",
+      fill: false,
+      tension: 0,
+      pointRadius: 1,
+      yAxisID: "yOrders",
+    },
+    {
+      label: isCumulative ? "Total Paid" : "Paid #",
       data: orderData,
       borderColor: "#1f6feb",
       backgroundColor: "rgba(31, 111, 235, 0.1)",
@@ -193,7 +207,7 @@ function renderChart() {
       type: "linear",
       position: "left",
       beginAtZero: true,
-      title: { display: true, text: isCumulative ? "Total Orders" : "Order #", color: "#1f6feb" },
+      title: { display: true, text: isCumulative ? "Total Paid" : "Paid #", color: "#1f6feb" },
       ticks: { color: "#1f6feb" },
       grid: { color: "#21262d" },
     },
@@ -248,7 +262,10 @@ function renderChart() {
 }
 
 async function loadChart() {
-  allPoints = await api("chart");
+  [allPoints, invoiceTimestamps] = await Promise.all([
+    api("chart"),
+    api("invoice-chart"),
+  ]);
   renderChart();
 }
 

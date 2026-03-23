@@ -119,6 +119,15 @@ export function getChartPoints(): ChartPoint[] {
     .all() as ChartPoint[];
 }
 
+export function getInvoiceTimestamps(): number[] {
+  const rows = db
+    .prepare(
+      `SELECT time FROM op_return_requests ORDER BY time`
+    )
+    .all() as { time: number }[];
+  return rows.map((r) => r.time);
+}
+
 export function getOrders(
   start?: string,
   end?: string,
