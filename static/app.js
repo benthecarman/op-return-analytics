@@ -83,7 +83,7 @@ async function loadSummary(start, end) {
     : "\u2014";
   $("#summary").innerHTML =
     stat("Invoices", fmtSats(data.total_invoices), convRate + " conversion") +
-    stat("Orders", fmtSats(data.total_orders), avgPerDay) +
+    stat("Paid", fmtSats(data.total_orders), avgPerDay) +
     stat("Profit", fmtSats(data.total_profit_sats) + " sats",
       fmtUsd(data.total_profit_usd, 0) + " at time / " + fmtUsd(currentUsd, 0) + " now") +
     stat("Chain Fees", fmtSats(data.total_chain_fees_sats) + " sats",
