@@ -107,7 +107,7 @@ async function loadOrders(start, end, page = 1) {
       <td>${fmtSats(o.profit)}</td>
       <td>${fmtUsd(satsToUsd(o.profit, o.btc_price))}</td>
       <td>${fmtSats(o.chain_fee)}</td>
-      <td>${o.vsize ?? "\u2014"}</td>
+      <td>${o.vsize != null ? Number(o.vsize).toLocaleString() : "\u2014"}</td>
       <td>${fmtFeeRate(o.fee_rate)}</td>
       <td>${o.no_twitter ? "Yes" : "No"}</td>
     </tr>`
