@@ -78,7 +78,11 @@ async function loadSummary(start, end) {
     const sub = secondary ? `<div class="subvalue">${secondary}</div>` : "";
     return `<div class="stat"><div class="label">${label}</div><div class="value">${primary}</div>${sub}</div>`;
   };
+  const convRate = data.total_invoices > 0
+    ? ((data.total_orders / data.total_invoices) * 100).toFixed(1) + "%"
+    : "\u2014";
   $("#summary").innerHTML =
+    stat("Invoices", fmtSats(data.total_invoices), convRate + " conversion") +
     stat("Orders", fmtSats(data.total_orders), avgPerDay) +
     stat("Profit", fmtSats(data.total_profit_sats) + " sats",
       fmtUsd(data.total_profit_usd, 0) + " at time / " + fmtUsd(currentUsd, 0) + " now") +

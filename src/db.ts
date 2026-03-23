@@ -10,6 +10,7 @@ db.pragma("journal_mode = WAL");
 
 export interface SummaryRow {
   total_orders: number;
+  total_invoices: number;
   total_profit: number;
   total_chain_fees: number;
   avg_profit: number;
@@ -51,6 +52,8 @@ export function getSummary(start?: string, end?: string): SummaryRow {
     .prepare(
       `SELECT
         count(*) as total_orders,
+        (SELECT count(*) FROM op_return_requests
+         WHERE time >= ? AND time <= ?) as total_invoices,
         coalesce(sum(profit), 0) as total_profit,
         coalesce(sum(chain_fee), 0) as total_chain_fees,
         coalesce(avg(profit), 0) as avg_profit,
@@ -65,7 +68,7 @@ export function getSummary(start?: string, end?: string): SummaryRow {
       WHERE txid IS NOT NULL
         AND time >= ? AND time <= ?`
     )
-    .get(tStart, tEnd) as SummaryRow;
+    .get(tStart, tEnd, tStart, tEnd) as SummaryRow;
 }
 
 export function getTimeseries(

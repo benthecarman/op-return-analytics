@@ -11,6 +11,7 @@ app.get("/api/summary", (c) => {
   const row = getSummary(start, end);
   return c.json({
     total_orders: row.total_orders,
+    total_invoices: row.total_invoices,
     total_profit_sats: row.total_profit,
     total_chain_fees_sats: row.total_chain_fees,
     avg_profit_sats: Math.round(row.avg_profit),
