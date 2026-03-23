@@ -1,7 +1,14 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { createHash } from "crypto";
+import { readFileSync } from "fs";
 import { dbPath, getSummary, getTimeseries, getChartPoints, getInvoiceTimestamps, getOrders } from "./db.js";
+
+const appJsHash = createHash("md5")
+  .update(readFileSync("static/app.js"))
+  .digest("hex")
+  .slice(0, 8);
 
 const app = new Hono();
 
@@ -65,7 +72,13 @@ app.get("/api/orders", (c) => {
   return c.json(getOrders(start, end, page, limit));
 });
 
-app.get("/", serveStatic({ path: "./static/index.html" }));
+app.get("/", (c) => {
+  const html = readFileSync("static/index.html", "utf-8").replace(
+    "app.js",
+    `app.js?v=${appJsHash}`
+  );
+  return c.html(html);
+});
 app.use("/static/*", serveStatic({ root: "./" }));
 
 const port = parseInt(process.env.PORT ?? "8083", 10);
