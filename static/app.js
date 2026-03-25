@@ -162,6 +162,7 @@ function renderChart() {
       fill: false,
       tension: 0,
       pointRadius: 1,
+      parsing: false,
       yAxisID: "yOrders",
     },
     {
@@ -172,6 +173,7 @@ function renderChart() {
       fill: false,
       tension: 0,
       pointRadius: 1,
+      parsing: false,
       yAxisID: "yOrders",
     },
     {
@@ -182,6 +184,7 @@ function renderChart() {
       fill: false,
       tension: 0,
       pointRadius: 1,
+      parsing: false,
       yAxisID: "yProfit",
     },
     {
@@ -192,6 +195,7 @@ function renderChart() {
       fill: true,
       tension: 0,
       pointRadius: 1,
+      parsing: false,
       yAxisID: "yUsd",
     },
   ];
@@ -236,6 +240,11 @@ function renderChart() {
       responsive: true,
       interaction: { mode: "index", intersect: false },
       plugins: {
+        decimation: {
+          enabled: true,
+          algorithm: "lttb",
+          samples: 500,
+        },
         legend: { labels: { color: "#c9d1d9" } },
         zoom: {
           zoom: {
