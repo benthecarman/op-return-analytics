@@ -175,6 +175,7 @@ function makeZoomPluginConfig(partner) {
       wheel: { enabled: false },
       mode: "x",
       onZoomComplete: ({ chart }) => {
+        if (suppressZoomHandler) return;
         syncZoom(chart, partner());
         onZoomOrPan();
       },
@@ -183,6 +184,7 @@ function makeZoomPluginConfig(partner) {
       enabled: true,
       mode: "x",
       onPanComplete: ({ chart }) => {
+        if (suppressZoomHandler) return;
         syncZoom(chart, partner());
         onZoomOrPan();
       },
