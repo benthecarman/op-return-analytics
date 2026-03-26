@@ -21,9 +21,12 @@ export interface SummaryRow {
 
 export interface TimeseriesRow {
   period: string;
+  time: number;
   orders: number;
+  invoices: number;
   profit: number;
   chain_fees: number;
+  profit_usd: number;
 }
 
 export interface OrderRow {
@@ -74,7 +77,7 @@ export function getSummary(start?: string, end?: string): SummaryRow {
 export function getTimeseries(
   start?: string,
   end?: string,
-  granularity: string = "day"
+  granularity: "day" | "week" | "month" = "day"
 ): TimeseriesRow[] {
   const tStart = tsFromDate(start, 0);
   const tEnd = tsFromDate(end, Math.floor(Date.now() / 1000));
@@ -90,42 +93,22 @@ export function getTimeseries(
     .prepare(
       `SELECT
         strftime(?, time, 'unixepoch') as period,
-        count(*) as orders,
-        coalesce(sum(profit), 0) as profit,
-        coalesce(sum(chain_fee), 0) as chain_fees
+        min(time) as time,
+        count(CASE WHEN txid IS NOT NULL THEN 1 END) as orders,
+        count(*) as invoices,
+        coalesce(sum(CASE WHEN txid IS NOT NULL THEN profit ELSE 0 END), 0) as profit,
+        coalesce(sum(CASE WHEN txid IS NOT NULL THEN chain_fee ELSE 0 END), 0) as chain_fees,
+        coalesce(sum(
+          CASE WHEN txid IS NOT NULL AND btc_price > 0
+            THEN (profit * 1.0 / 100000000) * (btc_price * 1.0 / 100)
+            ELSE 0 END
+        ), 0) as profit_usd
       FROM op_return_requests
-      WHERE txid IS NOT NULL
-        AND time >= ? AND time <= ?
+      WHERE time >= ? AND time <= ?
       GROUP BY period
       ORDER BY period`
     )
     .all(strftimeFmt, tStart, tEnd) as TimeseriesRow[];
-}
-
-export interface ChartPoint {
-  time: number;
-  profit: number;
-  btc_price: number;
-}
-
-export function getChartPoints(): ChartPoint[] {
-  return db
-    .prepare(
-      `SELECT time, coalesce(profit, 0) as profit, btc_price
-      FROM op_return_requests
-      WHERE txid IS NOT NULL
-      ORDER BY time`
-    )
-    .all() as ChartPoint[];
-}
-
-export function getInvoiceTimestamps(): number[] {
-  const rows = db
-    .prepare(
-      `SELECT time FROM op_return_requests ORDER BY time`
-    )
-    .all() as { time: number }[];
-  return rows.map((r) => r.time);
 }
 
 export function getOrders(

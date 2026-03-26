@@ -9,10 +9,11 @@ const api = async (path, params = {}) => {
 
 let mainChart;
 let currentPage = 1;
-let allPoints = [];
-let invoiceTimestamps = [];
+let tsDay = [], tsWeek = [], tsMonth = [];
 let isCumulative = false;
 let currentBtcPriceCents = 0;
+let currentGranularity = "month";
+let suppressZoomHandler = false;
 
 function fmtSats(n) {
   if (n == null) return "\u2014";
@@ -45,14 +46,6 @@ function fmtFeeRate(raw) {
   return raw;
 }
 
-function getVisibleRange() {
-  if (!mainChart || allPoints.length === 0) return {};
-  const scale = mainChart.scales.x;
-  const start = new Date(scale.min).toISOString().slice(0, 10);
-  const end = new Date(scale.max).toISOString().slice(0, 10);
-  return { start, end };
-}
-
 function fmtUsd(n, decimals = 2) {
   if (n == null || n === 0) return "\u2014";
   return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -61,6 +54,35 @@ function fmtUsd(n, decimals = 2) {
 function satsToUsd(sats, btcPriceCents) {
   if (!btcPriceCents || btcPriceCents === 0) return null;
   return (sats / 100000000) * (btcPriceCents / 100);
+}
+
+function getVisibleRange() {
+  if (!mainChart) return {};
+  const scale = mainChart.scales.x;
+  const start = new Date(scale.min).toISOString().slice(0, 10);
+  const end = new Date(scale.max).toISOString().slice(0, 10);
+  return { start, end };
+}
+
+function pickGranularity() {
+  let rangeMs;
+  if (mainChart) {
+    const scale = mainChart.scales.x;
+    rangeMs = scale.max - scale.min;
+  } else {
+    if (tsDay.length < 2) return "day";
+    rangeMs = (tsDay[tsDay.length - 1].time - tsDay[0].time) * 1000;
+  }
+  const days = rangeMs / 86400000;
+  if (days <= 90) return "day";
+  if (days <= 730) return "week";
+  return "month";
+}
+
+function getTimeseriesData(g) {
+  if (g === "day") return tsDay;
+  if (g === "week") return tsWeek;
+  return tsMonth;
 }
 
 async function loadSummary(start, end) {
@@ -121,42 +143,48 @@ async function loadOrders(start, end, page = 1) {
 }
 
 function onZoomOrPan() {
+  if (suppressZoomHandler) return;
   document.querySelectorAll(".zoom-btn").forEach((b) => b.classList.remove("active"));
   const range = getVisibleRange();
   loadSummary(range.start, range.end);
   loadOrders(range.start, range.end);
+
+  const g = pickGranularity();
+  if (g !== currentGranularity) {
+    renderChart();
+  }
 }
 
 function renderChart() {
-  const timestamps = allPoints.map((p) => p.time * 1000);
-  const profits = allPoints.map((p) => p.profit);
-  const profitsUsd = allPoints.map((p) =>
-    p.btc_price > 0 ? (p.profit / 100000000) * (p.btc_price / 100) : null
-  );
+  const g = pickGranularity();
+  currentGranularity = g;
+  const data = getTimeseriesData(g);
 
-  const invoiceTs = invoiceTimestamps.map((t) => t * 1000);
-  const invoiceData = invoiceTs.map((t, i) => ({ x: t, y: i + 1 }));
+  const toPoints = (values) => {
+    let sum = 0;
+    return data.map((p, i) => ({
+      x: p.time * 1000,
+      y: isCumulative ? (sum += values[i]) : values[i],
+    }));
+  };
+  const invoiceData = toPoints(data.map((p) => p.invoices));
+  const orderData = toPoints(data.map((p) => p.orders));
+  const profitData = toPoints(data.map((p) => p.profit_sats));
+  const profitUsdData = toPoints(data.map((p) => p.profit_usd));
 
-  let profitData, profitUsdData, orderData;
-  if (isCumulative) {
-    let profitSum = 0;
-    profitData = timestamps.map((t, i) => ({ x: t, y: (profitSum += profits[i]) }));
-    let usdSum = 0;
-    profitUsdData = timestamps.map((t, i) => ({ x: t, y: (usdSum += profitsUsd[i] ?? 0) }));
-    orderData = timestamps.map((t, i) => ({ x: t, y: i + 1 }));
-  } else {
-    profitData = timestamps.map((t, i) => ({ x: t, y: profits[i] }));
-    profitUsdData = timestamps.map((t, i) => ({ x: t, y: profitsUsd[i] }));
-    orderData = timestamps.map((t, i) => ({ x: t, y: i + 1 }));
+  const periodLabel = { day: "Day", week: "Week", month: "Month" }[g];
+  const suffix = isCumulative ? " (Cumulative)" : " / " + periodLabel;
+
+  let savedZoom = null;
+  if (mainChart) {
+    const scale = mainChart.scales.x;
+    savedZoom = { min: scale.min, max: scale.max };
+    mainChart.destroy();
   }
-
-  const suffix = isCumulative ? " (Cumulative)" : "";
-
-  if (mainChart) mainChart.destroy();
 
   const datasets = [
     {
-      label: "Total Invoices",
+      label: isCumulative ? "Total Invoices" : "Invoices / " + periodLabel,
       data: invoiceData,
       borderColor: "#8b949e",
       backgroundColor: "rgba(139, 148, 158, 0.1)",
@@ -167,7 +195,7 @@ function renderChart() {
       yAxisID: "yOrders",
     },
     {
-      label: isCumulative ? "Total Paid" : "Paid #",
+      label: isCumulative ? "Total Paid" : "Orders / " + periodLabel,
       data: orderData,
       borderColor: "#1f6feb",
       backgroundColor: "rgba(31, 111, 235, 0.1)",
@@ -204,7 +232,7 @@ function renderChart() {
   const scales = {
     x: {
       type: "time",
-      time: { tooltipFormat: "yyyy-MM-dd HH:mm" },
+      time: { tooltipFormat: "yyyy-MM-dd" },
       ticks: { color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
       grid: { color: "#21262d" },
     },
@@ -212,7 +240,11 @@ function renderChart() {
       type: "linear",
       position: "left",
       beginAtZero: true,
-      title: { display: true, text: isCumulative ? "Total Paid" : "Paid #", color: "#1f6feb" },
+      title: {
+        display: true,
+        text: isCumulative ? "Total Count" : "Count / " + periodLabel,
+        color: "#1f6feb",
+      },
       ticks: { color: "#1f6feb" },
       grid: { color: "#21262d" },
     },
@@ -269,12 +301,21 @@ function renderChart() {
       scales,
     },
   });
+
+  if (savedZoom) {
+    suppressZoomHandler = true;
+    mainChart.zoomScale("x", savedZoom, "none");
+    suppressZoomHandler = false;
+  }
+
+  $("#toggleMode").textContent = isCumulative ? "Per " + periodLabel : "Cumulative";
 }
 
 async function loadChart() {
-  [allPoints, invoiceTimestamps] = await Promise.all([
-    api("chart"),
-    api("invoice-chart"),
+  [tsDay, tsWeek, tsMonth] = await Promise.all([
+    api("timeseries", { granularity: "day" }),
+    api("timeseries", { granularity: "week" }),
+    api("timeseries", { granularity: "month" }),
   ]);
   renderChart();
 }
@@ -295,12 +336,11 @@ async function refresh() {
 
 $("#toggleMode").addEventListener("click", () => {
   isCumulative = !isCumulative;
-  $("#toggleMode").textContent = isCumulative ? "Per Order" : "Cumulative";
   renderChart();
 });
 
 function applyZoomPreset(range) {
-  if (!mainChart || allPoints.length === 0) return;
+  if (!mainChart) return;
 
   document.querySelectorAll(".zoom-btn").forEach((b) => b.classList.remove("active"));
   document.querySelector(`.zoom-btn[data-range="${range}"]`).classList.add("active");
@@ -309,6 +349,8 @@ function applyZoomPreset(range) {
     mainChart.resetZoom();
     loadSummary();
     loadOrders();
+    const g = pickGranularity();
+    if (g !== currentGranularity) renderChart();
     return;
   }
 

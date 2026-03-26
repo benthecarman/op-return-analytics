@@ -3,7 +3,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { createHash } from "crypto";
 import { readFileSync } from "fs";
-import { dbPath, getSummary, getTimeseries, getChartPoints, getInvoiceTimestamps, getOrders } from "./db.js";
+import { dbPath, getSummary, getTimeseries, getOrders } from "./db.js";
 
 const appJsHash = createHash("md5")
   .update(readFileSync("static/app.js"))
@@ -31,24 +31,20 @@ app.get("/api/summary", (c) => {
 app.get("/api/timeseries", (c) => {
   const start = c.req.query("start");
   const end = c.req.query("end");
-  const granularity = c.req.query("granularity") ?? "day";
+  const g = c.req.query("granularity");
+  const granularity = g === "week" || g === "month" ? g : "day";
   const rows = getTimeseries(start, end, granularity);
   return c.json(
     rows.map((r) => ({
       period: r.period,
+      time: r.time,
       orders: r.orders,
+      invoices: r.invoices,
       profit_sats: r.profit,
+      profit_usd: Math.round(r.profit_usd * 100) / 100,
       chain_fees_sats: r.chain_fees,
     }))
   );
-});
-
-app.get("/api/chart", (c) => {
-  return c.json(getChartPoints());
-});
-
-app.get("/api/invoice-chart", (c) => {
-  return c.json(getInvoiceTimestamps());
 });
 
 app.get("/api/btc-price", async (c) => {
