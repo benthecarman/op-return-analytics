@@ -101,13 +101,13 @@ button:disabled { opacity: 0.4; cursor: default; }
   color: #fff;
 }
 
-#countsChart {
-  max-height: 220px;
-  margin-bottom: 8px;
+.chart-wrap {
+  position: relative;
+  height: 220px;
 }
 
-#profitChart {
-  max-height: 220px;
+.chart-wrap + .chart-wrap {
+  margin-top: 8px;
 }
 
 .chart-hint {
