@@ -83,6 +83,24 @@ button:disabled { opacity: 0.4; cursor: default; }
   font-size: 12px;
 }
 
+.zoom-presets {
+  display: flex;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.zoom-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.zoom-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
 .chart-hint {
   margin-top: 8px;
   font-size: 12px;

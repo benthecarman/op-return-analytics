@@ -18,8 +18,15 @@
   <div class="chart-container">
     <div class="chart-box">
       <div class="chart-toolbar">
+        <div class="zoom-presets">
+          <button class="chart-btn zoom-btn active" data-range="all">ALL</button>
+          <button class="chart-btn zoom-btn" data-range="4y">4Y</button>
+          <button class="chart-btn zoom-btn" data-range="1y">1Y</button>
+          <button class="chart-btn zoom-btn" data-range="ytd">YTD</button>
+          <button class="chart-btn zoom-btn" data-range="1m">1M</button>
+          <button class="chart-btn zoom-btn" data-range="1d">1D</button>
+        </div>
         <button id="toggleMode" class="chart-btn">Cumulative</button>
-        <button id="resetZoom" class="chart-btn">Reset Zoom</button>
       </div>
       <canvas id="mainChart"></canvas>
     </div>

@@ -121,6 +121,7 @@ async function loadOrders(start, end, page = 1) {
 }
 
 function onZoomOrPan() {
+  document.querySelectorAll(".zoom-btn").forEach((b) => b.classList.remove("active"));
   const range = getVisibleRange();
   loadSummary(range.start, range.end);
   loadOrders(range.start, range.end);
@@ -298,12 +299,35 @@ $("#toggleMode").addEventListener("click", () => {
   renderChart();
 });
 
-$("#resetZoom").addEventListener("click", () => {
-  if (mainChart) {
+function applyZoomPreset(range) {
+  if (!mainChart || allPoints.length === 0) return;
+
+  document.querySelectorAll(".zoom-btn").forEach((b) => b.classList.remove("active"));
+  document.querySelector(`.zoom-btn[data-range="${range}"]`).classList.add("active");
+
+  if (range === "all") {
     mainChart.resetZoom();
     loadSummary();
     loadOrders();
+    return;
   }
+
+  const now = new Date();
+  let min;
+  switch (range) {
+    case "4y": min = new Date(now.getFullYear() - 4, now.getMonth(), now.getDate()); break;
+    case "1y": min = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()); break;
+    case "ytd": min = new Date(now.getFullYear(), 0, 1); break;
+    case "1m": min = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()); break;
+    case "1d": min = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1); break;
+  }
+
+  mainChart.zoomScale("x", { min: min.getTime(), max: now.getTime() }, "default");
+  onZoomOrPan();
+}
+
+document.querySelectorAll(".zoom-btn").forEach((btn) => {
+  btn.addEventListener("click", () => applyZoomPreset(btn.dataset.range));
 });
 
 $("#prevPage").addEventListener("click", () => {
