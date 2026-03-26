@@ -162,15 +162,24 @@ function renderChart() {
 
   const toPoints = (values) => {
     let sum = 0;
-    return data.map((p, i) => {
-      const v = isCumulative ? (sum += values[i]) : values[i];
-      return { x: p.time * 1000, y: v > 0 ? v : null };
-    });
+    return data.map((p, i) => ({
+      x: p.time * 1000,
+      y: isCumulative ? (sum += values[i]) : values[i],
+    }));
   };
   const invoiceData = toPoints(data.map((p) => p.invoices));
   const orderData = toPoints(data.map((p) => p.orders));
   const profitData = toPoints(data.map((p) => p.profit_sats));
   const profitUsdData = toPoints(data.map((p) => p.profit_usd));
+
+  function percentile(points, pct) {
+    const vals = points.map((p) => p.y).filter((v) => v > 0).sort((a, b) => a - b);
+    if (vals.length === 0) return undefined;
+    return vals[Math.min(Math.floor(vals.length * pct), vals.length - 1)];
+  }
+  const orderMax = percentile(orderData.concat(invoiceData), 0.95);
+  const profitMax = percentile(profitData, 0.95);
+  const usdMax = percentile(profitUsdData, 0.95);
 
   const periodLabel = { day: "Day", week: "Week", month: "Month" }[g];
   const suffix = isCumulative ? " (Cumulative)" : " / " + periodLabel;
@@ -237,9 +246,10 @@ function renderChart() {
       grid: { color: "#21262d" },
     },
     yOrders: {
-      type: "logarithmic",
+      type: "linear",
       position: "left",
-      min: 1,
+      beginAtZero: true,
+      suggestedMax: orderMax,
       title: {
         display: true,
         text: isCumulative ? "Total Count" : "Count / " + periodLabel,
@@ -249,15 +259,19 @@ function renderChart() {
       grid: { color: "#21262d" },
     },
     yProfit: {
-      type: "logarithmic",
+      type: "linear",
       position: "right",
+      beginAtZero: true,
+      suggestedMax: profitMax,
       title: { display: true, text: "Profit (sats)" + suffix, color: "#d29922" },
       ticks: { color: "#d29922" },
       grid: { drawOnChartArea: false },
     },
     yUsd: {
-      type: "logarithmic",
+      type: "linear",
       position: "right",
+      beginAtZero: true,
+      suggestedMax: usdMax,
       title: { display: true, text: "Profit (USD)" + suffix, color: "#3fb950" },
       ticks: { color: "#3fb950" },
       grid: { drawOnChartArea: false },
