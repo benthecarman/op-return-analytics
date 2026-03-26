@@ -229,7 +229,7 @@ function renderChart() {
   const bar = (label, data, color, yAxisID) => ({
     type: "bar",
     label, data, backgroundColor: color, parsing: false, yAxisID,
-    barPercentage: 0.9, categoryPercentage: 0.8,
+    barPercentage: 1, categoryPercentage: 1, minBarLength: 3,
   });
 
   // --- Counts chart datasets ---
