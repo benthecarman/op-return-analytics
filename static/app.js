@@ -191,56 +191,32 @@ function renderChart() {
     mainChart.destroy();
   }
 
-  const datasets = [
-    {
-      label: isCumulative ? "Total Invoices" : "Invoices / " + periodLabel,
-      data: invoiceData,
-      borderColor: "#8b949e",
-      backgroundColor: "rgba(139, 148, 158, 0.1)",
-      fill: false,
-      tension: 0,
-      pointRadius: 1,
-      parsing: false,
-      yAxisID: "yOrders",
-    },
-    {
-      label: isCumulative ? "Total Paid" : "Orders / " + periodLabel,
-      data: orderData,
-      borderColor: "#1f6feb",
-      backgroundColor: "rgba(31, 111, 235, 0.1)",
-      fill: false,
-      tension: 0,
-      pointRadius: 1,
-      parsing: false,
-      yAxisID: "yOrders",
-    },
-    {
-      label: "Profit (sats)" + suffix,
-      data: profitData,
-      borderColor: "#d29922",
-      backgroundColor: "rgba(210, 153, 34, 0.1)",
-      fill: false,
-      tension: 0,
-      pointRadius: 1,
-      parsing: false,
-      yAxisID: "yProfit",
-    },
-    {
-      label: "Profit (USD)" + suffix,
-      data: profitUsdData,
-      borderColor: "#3fb950",
-      backgroundColor: "rgba(63, 185, 80, 0.1)",
-      fill: true,
-      tension: 0,
-      pointRadius: 1,
-      parsing: false,
-      yAxisID: "yUsd",
-    },
+  const line = (label, data, color, bgColor, yAxisID, fill) => ({
+    type: "line",
+    label, data, borderColor: color, backgroundColor: bgColor,
+    fill: !!fill, tension: 0, pointRadius: 1, parsing: false, yAxisID,
+  });
+  const bar = (label, data, color, yAxisID) => ({
+    type: "bar",
+    label, data, backgroundColor: color, parsing: false, yAxisID,
+  });
+
+  const datasets = isCumulative ? [
+    line("Total Invoices", invoiceData, "#8b949e", "rgba(139, 148, 158, 0.1)", "yOrders"),
+    line("Total Paid", orderData, "#1f6feb", "rgba(31, 111, 235, 0.1)", "yOrders"),
+    line("Profit (sats)" + suffix, profitData, "#d29922", "rgba(210, 153, 34, 0.1)", "yProfit"),
+    line("Profit (USD)" + suffix, profitUsdData, "#3fb950", "rgba(63, 185, 80, 0.1)", "yUsd", true),
+  ] : [
+    bar("Invoices / " + periodLabel, invoiceData, "rgba(139, 148, 158, 0.5)", "yOrders"),
+    bar("Orders / " + periodLabel, orderData, "rgba(31, 111, 235, 0.5)", "yOrders"),
+    bar("Profit (sats)" + suffix, profitData, "rgba(210, 153, 34, 0.5)", "yProfit"),
+    bar("Profit (USD)" + suffix, profitUsdData, "rgba(63, 185, 80, 0.5)", "yUsd"),
   ];
 
   const scales = {
     x: {
       type: "time",
+      offset: !isCumulative,
       time: { tooltipFormat: "yyyy-MM-dd" },
       ticks: { color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
       grid: { color: "#21262d" },
@@ -286,7 +262,7 @@ function renderChart() {
       interaction: { mode: "index", intersect: false },
       plugins: {
         decimation: {
-          enabled: true,
+          enabled: isCumulative,
           algorithm: "lttb",
           samples: 500,
         },
