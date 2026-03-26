@@ -177,9 +177,9 @@ function renderChart() {
     if (vals.length === 0) return undefined;
     return vals[Math.min(Math.floor(vals.length * pct), vals.length - 1)];
   }
-  const orderMax = percentile(orderData.concat(invoiceData), 0.95);
-  const profitMax = percentile(profitData, 0.95);
-  const usdMax = percentile(profitUsdData, 0.95);
+  const orderMax = isCumulative ? undefined : percentile(orderData.concat(invoiceData), 0.95);
+  const profitMax = isCumulative ? undefined : percentile(profitData, 0.95);
+  const usdMax = isCumulative ? undefined : percentile(profitUsdData, 0.95);
 
   const periodLabel = { day: "Day", week: "Week", month: "Month" }[g];
   const suffix = isCumulative ? " (Cumulative)" : " / " + periodLabel;
@@ -249,7 +249,7 @@ function renderChart() {
       type: "linear",
       position: "left",
       beginAtZero: true,
-      suggestedMax: orderMax,
+      max: orderMax,
       title: {
         display: true,
         text: isCumulative ? "Total Count" : "Count / " + periodLabel,
@@ -262,7 +262,7 @@ function renderChart() {
       type: "linear",
       position: "right",
       beginAtZero: true,
-      suggestedMax: profitMax,
+      max: profitMax,
       title: { display: true, text: "Profit (sats)" + suffix, color: "#d29922" },
       ticks: { color: "#d29922" },
       grid: { drawOnChartArea: false },
@@ -271,7 +271,7 @@ function renderChart() {
       type: "linear",
       position: "right",
       beginAtZero: true,
-      suggestedMax: usdMax,
+      max: usdMax,
       title: { display: true, text: "Profit (USD)" + suffix, color: "#3fb950" },
       ticks: { color: "#3fb950" },
       grid: { drawOnChartArea: false },
