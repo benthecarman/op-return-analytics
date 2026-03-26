@@ -162,10 +162,10 @@ function renderChart() {
 
   const toPoints = (values) => {
     let sum = 0;
-    return data.map((p, i) => ({
-      x: p.time * 1000,
-      y: isCumulative ? (sum += values[i]) : values[i],
-    }));
+    return data.map((p, i) => {
+      const v = isCumulative ? (sum += values[i]) : values[i];
+      return { x: p.time * 1000, y: v > 0 ? v : null };
+    });
   };
   const invoiceData = toPoints(data.map((p) => p.invoices));
   const orderData = toPoints(data.map((p) => p.orders));
@@ -237,9 +237,9 @@ function renderChart() {
       grid: { color: "#21262d" },
     },
     yOrders: {
-      type: "linear",
+      type: "logarithmic",
       position: "left",
-      beginAtZero: true,
+      min: 1,
       title: {
         display: true,
         text: isCumulative ? "Total Count" : "Count / " + periodLabel,
@@ -249,17 +249,15 @@ function renderChart() {
       grid: { color: "#21262d" },
     },
     yProfit: {
-      type: "linear",
+      type: "logarithmic",
       position: "right",
-      beginAtZero: true,
       title: { display: true, text: "Profit (sats)" + suffix, color: "#d29922" },
       ticks: { color: "#d29922" },
       grid: { drawOnChartArea: false },
     },
     yUsd: {
-      type: "linear",
+      type: "logarithmic",
       position: "right",
-      beginAtZero: true,
       title: { display: true, text: "Profit (USD)" + suffix, color: "#3fb950" },
       ticks: { color: "#3fb950" },
       grid: { drawOnChartArea: false },
