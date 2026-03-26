@@ -101,6 +101,15 @@ button:disabled { opacity: 0.4; cursor: default; }
   color: #fff;
 }
 
+#countsChart {
+  max-height: 220px;
+  margin-bottom: 8px;
+}
+
+#profitChart {
+  max-height: 220px;
+}
+
 .chart-hint {
   margin-top: 8px;
   font-size: 12px;

@@ -7,7 +7,7 @@ const api = async (path, params = {}) => {
   return res.json();
 };
 
-let mainChart;
+let countsChart, profitChart;
 let currentPage = 1;
 let tsDay = [], tsWeek = [], tsMonth = [];
 let isCumulative = false;
@@ -57,8 +57,8 @@ function satsToUsd(sats, btcPriceCents) {
 }
 
 function getVisibleRange() {
-  if (!mainChart) return {};
-  const scale = mainChart.scales.x;
+  if (!countsChart) return {};
+  const scale = countsChart.scales.x;
   const start = new Date(scale.min).toISOString().slice(0, 10);
   const end = new Date(scale.max).toISOString().slice(0, 10);
   return { start, end };
@@ -66,8 +66,8 @@ function getVisibleRange() {
 
 function pickGranularity() {
   let rangeMs;
-  if (mainChart) {
-    const scale = mainChart.scales.x;
+  if (countsChart) {
+    const scale = countsChart.scales.x;
     rangeMs = scale.max - scale.min;
   } else {
     if (tsDay.length < 2) return "day";
@@ -142,6 +142,14 @@ async function loadOrders(start, end, page = 1) {
     .join("");
 }
 
+function syncZoom(source, target) {
+  if (!target) return;
+  const scale = source.scales.x;
+  suppressZoomHandler = true;
+  target.zoomScale("x", { min: scale.min, max: scale.max }, "none");
+  suppressZoomHandler = false;
+}
+
 function onZoomOrPan() {
   if (suppressZoomHandler) return;
   document.querySelectorAll(".zoom-btn").forEach((b) => b.classList.remove("active"));
@@ -153,6 +161,33 @@ function onZoomOrPan() {
   if (g !== currentGranularity) {
     renderChart();
   }
+}
+
+function makeZoomPluginConfig(partner) {
+  return {
+    zoom: {
+      drag: {
+        enabled: true,
+        backgroundColor: "rgba(31, 111, 235, 0.15)",
+        borderColor: "#1f6feb",
+        borderWidth: 1,
+      },
+      wheel: { enabled: false },
+      mode: "x",
+      onZoomComplete: ({ chart }) => {
+        syncZoom(chart, partner());
+        onZoomOrPan();
+      },
+    },
+    pan: {
+      enabled: true,
+      mode: "x",
+      onPanComplete: ({ chart }) => {
+        syncZoom(chart, partner());
+        onZoomOrPan();
+      },
+    },
+  };
 }
 
 function renderChart() {
@@ -169,26 +204,18 @@ function renderChart() {
   };
   const invoiceData = toPoints(data.map((p) => p.invoices));
   const orderData = toPoints(data.map((p) => p.orders));
-  const profitData = toPoints(data.map((p) => p.profit_sats));
+  const profitSatsData = toPoints(data.map((p) => p.profit_sats));
   const profitUsdData = toPoints(data.map((p) => p.profit_usd));
-
-  function percentile(points, pct) {
-    const vals = points.map((p) => p.y).filter((v) => v > 0).sort((a, b) => a - b);
-    if (vals.length === 0) return undefined;
-    return vals[Math.min(Math.floor(vals.length * pct), vals.length - 1)];
-  }
-  const orderMax = isCumulative ? undefined : percentile(orderData.concat(invoiceData), 0.95);
-  const profitMax = isCumulative ? undefined : percentile(profitData, 0.95);
-  const usdMax = isCumulative ? undefined : percentile(profitUsdData, 0.95);
 
   const periodLabel = { day: "Day", week: "Week", month: "Month" }[g];
   const suffix = isCumulative ? " (Cumulative)" : " / " + periodLabel;
 
   let savedZoom = null;
-  if (mainChart) {
-    const scale = mainChart.scales.x;
+  if (countsChart) {
+    const scale = countsChart.scales.x;
     savedZoom = { min: scale.min, max: scale.max };
-    mainChart.destroy();
+    countsChart.destroy();
+    profitChart.destroy();
   }
 
   const line = (label, data, color, bgColor, yAxisID, fill) => ({
@@ -196,104 +223,121 @@ function renderChart() {
     label, data, borderColor: color, backgroundColor: bgColor,
     fill: !!fill, tension: 0, pointRadius: 1, parsing: false, yAxisID,
   });
-  const bar = (label, data, color, yAxisID, stack, order, barPct) => ({
+  const bar = (label, data, color, yAxisID) => ({
     type: "bar",
     label, data, backgroundColor: color, parsing: false, yAxisID,
-    stack, order, barPercentage: barPct, categoryPercentage: 0.95,
+    barPercentage: 0.9, categoryPercentage: 0.8,
   });
 
-  const datasets = isCumulative ? [
-    line("Total Invoices", invoiceData, "#8b949e", "rgba(139, 148, 158, 0.1)", "yOrders"),
-    line("Total Paid", orderData, "#1f6feb", "rgba(31, 111, 235, 0.1)", "yOrders"),
-    line("Profit (sats)" + suffix, profitData, "#d29922", "rgba(210, 153, 34, 0.1)", "yProfit"),
-    line("Profit (USD)" + suffix, profitUsdData, "#3fb950", "rgba(63, 185, 80, 0.1)", "yUsd", true),
+  // --- Counts chart datasets ---
+  const countsDatasets = isCumulative ? [
+    line("Total Invoices", invoiceData, "#8b949e", "rgba(139, 148, 158, 0.1)", "y"),
+    line("Total Paid", orderData, "#1f6feb", "rgba(31, 111, 235, 0.1)", "y"),
   ] : [
-    bar("Invoices / " + periodLabel, invoiceData, "rgba(139, 148, 158, 0.5)", "yOrders", "counts", 0, 0.9),
-    bar("Orders / " + periodLabel, orderData, "rgba(31, 111, 235, 0.7)", "yOrders", "counts", 1, 0.5),
-    bar("Profit (sats)" + suffix, profitData, "rgba(210, 153, 34, 0.5)", "yProfit", "profit", 0, 0.9),
-    bar("Profit (USD)" + suffix, profitUsdData, "rgba(63, 185, 80, 0.7)", "yUsd", "profit", 1, 0.5),
+    bar("Invoices" + suffix, invoiceData, "rgba(139, 148, 158, 0.5)", "y"),
+    bar("Orders" + suffix, orderData, "rgba(31, 111, 235, 0.7)", "y"),
   ];
 
-  const scales = {
-    x: {
-      type: "time",
-      offset: !isCumulative,
-      time: { tooltipFormat: "yyyy-MM-dd" },
-      ticks: { color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
-      grid: { color: "#21262d" },
+  // --- Profit chart datasets ---
+  const profitDatasets = isCumulative ? [
+    line("Profit (sats)" + suffix, profitSatsData, "#d29922", "rgba(210, 153, 34, 0.1)", "y"),
+    line("Profit (USD)" + suffix, profitUsdData, "#3fb950", "rgba(63, 185, 80, 0.1)", "yUsd", true),
+  ] : [
+    bar("Profit (sats)" + suffix, profitSatsData, "rgba(210, 153, 34, 0.6)", "y"),
+  ];
+
+  const sharedXScale = (showTicks) => ({
+    type: "time",
+    offset: !isCumulative,
+    time: { tooltipFormat: "yyyy-MM-dd" },
+    ticks: { display: showTicks, color: "#8b949e", maxRotation: 45, maxTicksLimit: 20 },
+    grid: { color: "#21262d" },
+  });
+
+  // --- Build counts chart ---
+  countsChart = new Chart($("#countsChart"), {
+    type: "line",
+    data: { datasets: countsDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        decimation: { enabled: isCumulative, algorithm: "lttb", samples: 500 },
+        legend: { labels: { color: "#c9d1d9" } },
+        zoom: makeZoomPluginConfig(() => profitChart),
+      },
+      scales: {
+        x: sharedXScale(false),
+        y: {
+          type: "linear",
+          position: "left",
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: isCumulative ? "Total Count" : "Count" + suffix,
+            color: "#1f6feb",
+          },
+          ticks: { color: "#1f6feb" },
+          grid: { color: "#21262d" },
+        },
+      },
     },
-    yOrders: {
+  });
+
+  // --- Build profit chart ---
+  const profitScales = {
+    x: sharedXScale(true),
+    y: {
       type: "linear",
       position: "left",
       beginAtZero: true,
-      max: orderMax,
-      title: {
-        display: true,
-        text: isCumulative ? "Total Count" : "Count / " + periodLabel,
-        color: "#1f6feb",
-      },
-      ticks: { color: "#1f6feb" },
-      grid: { color: "#21262d" },
-    },
-    yProfit: {
-      type: "linear",
-      position: "right",
-      beginAtZero: true,
-      max: profitMax,
       title: { display: true, text: "Profit (sats)" + suffix, color: "#d29922" },
       ticks: { color: "#d29922" },
-      grid: { drawOnChartArea: false },
-    },
-    yUsd: {
-      type: "linear",
-      position: "right",
-      beginAtZero: true,
-      max: usdMax,
-      title: { display: true, text: "Profit (USD)" + suffix, color: "#3fb950" },
-      ticks: { color: "#3fb950" },
-      grid: { drawOnChartArea: false },
+      grid: { color: "#21262d" },
     },
   };
 
-  mainChart = new Chart($("#mainChart"), {
+  if (isCumulative) {
+    profitScales.yUsd = {
+      type: "linear",
+      position: "right",
+      beginAtZero: true,
+      title: { display: true, text: "Profit (USD)" + suffix, color: "#3fb950" },
+      ticks: { color: "#3fb950" },
+      grid: { drawOnChartArea: false },
+    };
+  }
+
+  profitChart = new Chart($("#profitChart"), {
     type: "line",
-    data: { datasets },
+    data: { datasets: profitDatasets },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        decimation: {
-          enabled: isCumulative,
-          algorithm: "lttb",
-          samples: 500,
-        },
+        decimation: { enabled: isCumulative, algorithm: "lttb", samples: 500 },
         legend: { labels: { color: "#c9d1d9" } },
-        zoom: {
-          zoom: {
-            drag: {
-              enabled: true,
-              backgroundColor: "rgba(31, 111, 235, 0.15)",
-              borderColor: "#1f6feb",
-              borderWidth: 1,
+        zoom: makeZoomPluginConfig(() => countsChart),
+        tooltip: !isCumulative ? {
+          callbacks: {
+            afterLabel: (ctx) => {
+              const row = data[ctx.dataIndex];
+              if (!row) return "";
+              return fmtUsd(row.profit_usd);
             },
-            wheel: { enabled: false },
-            mode: "x",
-            onZoomComplete: onZoomOrPan,
           },
-          pan: {
-            enabled: true,
-            mode: "x",
-            onPanComplete: onZoomOrPan,
-          },
-        },
+        } : {},
       },
-      scales,
+      scales: profitScales,
     },
   });
 
   if (savedZoom) {
     suppressZoomHandler = true;
-    mainChart.zoomScale("x", savedZoom, "none");
+    countsChart.zoomScale("x", savedZoom, "none");
+    profitChart.zoomScale("x", savedZoom, "none");
     suppressZoomHandler = false;
   }
 
@@ -329,13 +373,14 @@ $("#toggleMode").addEventListener("click", () => {
 });
 
 function applyZoomPreset(range) {
-  if (!mainChart) return;
+  if (!countsChart || !profitChart) return;
 
   document.querySelectorAll(".zoom-btn").forEach((b) => b.classList.remove("active"));
   document.querySelector(`.zoom-btn[data-range="${range}"]`).classList.add("active");
 
   if (range === "all") {
-    mainChart.resetZoom();
+    countsChart.resetZoom();
+    profitChart.resetZoom();
     loadSummary();
     loadOrders();
     const g = pickGranularity();
@@ -353,12 +398,25 @@ function applyZoomPreset(range) {
     case "1d": min = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1); break;
   }
 
-  mainChart.zoomScale("x", { min: min.getTime(), max: now.getTime() }, "default");
+  countsChart.zoomScale("x", { min: min.getTime(), max: now.getTime() }, "default");
+  profitChart.zoomScale("x", { min: min.getTime(), max: now.getTime() }, "default");
   onZoomOrPan();
 }
 
 document.querySelectorAll(".zoom-btn").forEach((btn) => {
   btn.addEventListener("click", () => applyZoomPreset(btn.dataset.range));
+});
+
+$("#countsChart").addEventListener("dblclick", () => {
+  countsChart.resetZoom();
+  profitChart.resetZoom();
+  onZoomOrPan();
+});
+
+$("#profitChart").addEventListener("dblclick", () => {
+  countsChart.resetZoom();
+  profitChart.resetZoom();
+  onZoomOrPan();
 });
 
 $("#prevPage").addEventListener("click", () => {
