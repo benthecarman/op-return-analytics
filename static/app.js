@@ -193,6 +193,7 @@ function makeZoomPluginConfig(partner) {
 }
 
 function renderChart() {
+  suppressZoomHandler = true;
   const g = pickGranularity();
   currentGranularity = g;
   const data = getTimeseriesData(g);
@@ -337,12 +338,11 @@ function renderChart() {
   });
 
   if (savedZoom) {
-    suppressZoomHandler = true;
     countsChart.zoomScale("x", savedZoom, "none");
     profitChart.zoomScale("x", savedZoom, "none");
-    suppressZoomHandler = false;
   }
 
+  suppressZoomHandler = false;
   $("#toggleMode").textContent = isCumulative ? "Per " + periodLabel : "Cumulative";
 }
 
